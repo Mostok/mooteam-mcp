@@ -12,6 +12,7 @@ This is an independent community integration, not an official Moo.team product.
 
 - Reads task description, participants, workflow status, parent reference and checklist.
 - Preserves comment authors, timestamps, chronology and reply relationships.
+- Adds user-confirmed participant roles from an optional local directory.
 - Separates human discussion from optional activity history.
 - Associates files with their task description or specific comment.
 - Returns supported images as MCP image content, PDF embedded text and UTF-8 text.

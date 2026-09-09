@@ -31,6 +31,7 @@ MCP stdio → tool handlers → task context / attachment services → GET-only 
 | `src/server.ts` | MCP schemas, tool results, error and redaction boundary |
 | `src/api-client.ts` | Fixed API origin, auth, bounded GETs and pagination |
 | `src/task-context.ts` | Task/comment assembly, authors and file ownership |
+| `src/roles.ts` | Bounded local role directory, workspace scope and project overrides |
 | `src/rich-text.ts` | Rich-text conversion with explicit limitations |
 | `src/attachments.ts` | File validation, format dispatch and output bounds |
 | `src/pdf-worker.ts` | Isolated PDF text extraction |

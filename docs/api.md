@@ -33,6 +33,10 @@ The result contains:
 - `warnings`, `fetchedAt`, `notes`: completeness and interpretation constraints.
 
 Rich bodies include `markdown`, `links`, `mentions`, `inlineFileIds` and warnings.
+Task participants, comment authors/editors, mentions and history authors also
+include `role`, `roleSource` (`local` or null) and `roleScope` (`company`, `project`
+or null). Roles come only from the user's local directory, not inferred job titles
+or Moo.team permissions. See [local participant roles](configuration.md#local-participant-roles).
 Draft-style `newContent` takes precedence when it contains actual content; a
 legacy `content` tree is the fallback. Strike-through formatting is retained.
 Unsupported formatting or structures produce warnings. Inline files use internal

@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { MooTeamError } from './errors.js';
 import type { LogLevel } from './logger.js';
 
@@ -8,6 +8,7 @@ export interface Config {
   token: string;
   company: string;
   fileToken?: string;
+  rolesFile?: string;
   timeoutMs: number;
   maxPages: number;
   maxAttachmentBytes: number;
@@ -34,7 +35,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (!/^[A-Za-z0-9_-]+$/.test(company)) throw new MooTeamError('CONFIG_INVALID', 'Invalid company alias.');
   const logLevel = env.LOG_LEVEL || 'info';
   if (!['debug', 'info', 'warn', 'error', 'silent'].includes(logLevel)) throw new MooTeamError('CONFIG_INVALID', 'LOG_LEVEL must be debug, info, warn, error or silent.');
-  return { token, company, fileToken, timeoutMs: integer(env.MOOTEAM_TIMEOUT_MS, 30000, 1000, 120000), maxPages: integer(env.MOOTEAM_MAX_PAGES, 100, 1, 1000), maxAttachmentBytes: integer(env.MOOTEAM_MAX_ATTACHMENT_BYTES, 10 * 1024 * 1024, 1024, 50 * 1024 * 1024), logLevel: logLevel as LogLevel };
+  const rolesFile = env.MOOTEAM_ROLES_FILE || join(dirname(path), 'roles.json');
+  return { token, company, fileToken, rolesFile, timeoutMs: integer(env.MOOTEAM_TIMEOUT_MS, 30000, 1000, 120000), maxPages: integer(env.MOOTEAM_MAX_PAGES, 100, 1, 1000), maxAttachmentBytes: integer(env.MOOTEAM_MAX_ATTACHMENT_BYTES, 10 * 1024 * 1024, 1024, 50 * 1024 * 1024), logLevel: logLevel as LogLevel };
 }
 
 function integer(value: string | undefined, fallback: number, min: number, max: number): number {

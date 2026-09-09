@@ -2,6 +2,7 @@ import { ApiClient } from './api-client.js';
 import { MooTeamError, publicError } from './errors.js';
 import { preferredRichText } from './rich-text.js';
 import { parseTaskReference } from './task-reference.js';
+import { loadRoles } from './roles.js';
 import { array, id, record, string, type Attachment, type PageResult, type RecordData, type RichText } from './types.js';
 
 export interface ContextOptions { commentsOffset?: number; commentsLimit?: number; includeHistory?: boolean }
@@ -23,19 +24,22 @@ export class TaskContextService {
         return { items: [], complete: false, total: null, pagesRead: 0, warnings: [`${path.split('/')[1]}: ${publicError(error).message}`] };
       }
     };
-    const [comments, profiles, statuses] = await Promise.all([
+    const [comments, profiles, statuses, roles] = await Promise.all([
       optional('/comments', { expand: 'privacyUsers', 'filters[entity]': 'task', 'filters[entityId]': reference.taskId }),
       optional('/user-profiles', { fields: 'userId,firstname,lastname', 'per-page': 0 }),
       optional('/task-statuses', { fields: 'statusId,name', 'per-page': 0 }),
+      loadRoles(this.api.config, this.api.log),
     ]);
+    warnings.push(...roles.warnings);
     const people = new Map(profiles.items.map(p => [id(p.userId), `${string(p.firstname)} ${string(p.lastname)}`.trim()]));
     const person = (userId: unknown, explicitName?: unknown) => {
       const n = id(userId);
       const name = string(explicitName) || people.get(n) || null;
       if (n && !name) warnings.push(`Display name unavailable for user ${n}.`);
-      return { userId: n, name };
+      return { userId: n, name, ...roles.resolve(n, id(raw.projectId)) };
     };
-    const description = preferredRichText(raw.newDescription ?? raw.description, raw.content);
+    const enrichMentions = (body: RichText) => ({ ...body, mentions: body.mentions.map(mention => ({ ...mention, ...person(mention.userId) })) });
+    const description = enrichMentions(preferredRichText(raw.newDescription ?? raw.description, raw.content));
     const attachments: Attachment[] = this.files(raw.files, { kind: 'task', id: reference.taskId }, description);
     const seen = new Set<number>();
     const normalized = comments.items.flatMap(comment => {
@@ -44,7 +48,7 @@ export class TaskContextService {
       if (seen.has(commentId)) { comments.complete = false; comments.warnings.push('Duplicate comment IDs across pages; fetch again.'); return []; }
       if (comment.entity !== 'task' || id(comment.entityId) !== reference.taskId) { comments.complete = false; comments.warnings.push('Skipped a comment belonging to a different entity.'); return []; }
       seen.add(commentId);
-      const body = preferredRichText(comment.newContent, comment.content);
+      const body = enrichMentions(preferredRichText(comment.newContent, comment.content));
       const files = this.files(comment.files, { kind: 'comment', id: commentId }, body);
       attachments.push(...files);
       return [{ commentId, author: person(comment.createdBy, comment.authorName), updatedBy: person(comment.updatedBy), createdAt: string(comment.timeCreated) || null, updatedAt: string(comment.timeUpdated) || null, parentId: id(comment.parentId), replyToCommentId: id(comment.replyId), relatedTaskId: id(comment.relatedTaskId), body, attachments: files, sourceUrl: this.taskUrl(raw, reference.workspace) + '#comment-' + commentId }];
