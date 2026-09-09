@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { MooTeamError } from './errors.js';
 import type { LogLevel } from './logger.js';
 
@@ -9,6 +10,10 @@ export interface Config {
   company: string;
   fileToken?: string;
   rolesFile?: string;
+  historyFile?: string;
+  historyMaxBytes?: number;
+  historyMaxTasks?: number;
+  historyRetentionDays?: number;
   timeoutMs: number;
   maxPages: number;
   maxAttachmentBytes: number;
@@ -36,7 +41,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const logLevel = env.LOG_LEVEL || 'info';
   if (!['debug', 'info', 'warn', 'error', 'silent'].includes(logLevel)) throw new MooTeamError('CONFIG_INVALID', 'LOG_LEVEL must be debug, info, warn, error or silent.');
   const rolesFile = env.MOOTEAM_ROLES_FILE || join(dirname(path), 'roles.json');
-  return { token, company, fileToken, rolesFile, timeoutMs: integer(env.MOOTEAM_TIMEOUT_MS, 30000, 1000, 120000), maxPages: integer(env.MOOTEAM_MAX_PAGES, 100, 1, 1000), maxAttachmentBytes: integer(env.MOOTEAM_MAX_ATTACHMENT_BYTES, 10 * 1024 * 1024, 1024, 50 * 1024 * 1024), logLevel: logLevel as LogLevel };
+  const historyFile = env.MOOTEAM_HISTORY === 'off' ? undefined : join(dirname(path), `history-${createHash('sha256').update(company).digest('hex').slice(0, 16)}.json.gz`);
+  return { token, company, fileToken, rolesFile, historyFile, historyMaxBytes: integer(env.MOOTEAM_HISTORY_MAX_BYTES, 1048576, 16384, 10485760), historyMaxTasks: integer(env.MOOTEAM_HISTORY_MAX_TASKS, 200, 1, 2000), historyRetentionDays: integer(env.MOOTEAM_HISTORY_DAYS, 90, 1, 365), timeoutMs: integer(env.MOOTEAM_TIMEOUT_MS, 30000, 1000, 120000), maxPages: integer(env.MOOTEAM_MAX_PAGES, 100, 1, 1000), maxAttachmentBytes: integer(env.MOOTEAM_MAX_ATTACHMENT_BYTES, 10 * 1024 * 1024, 1024, 50 * 1024 * 1024), logLevel: logLevel as LogLevel };
 }
 
 function integer(value: string | undefined, fallback: number, min: number, max: number): number {

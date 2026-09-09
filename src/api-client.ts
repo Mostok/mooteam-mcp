@@ -4,7 +4,7 @@ import type { Logger } from './logger.js';
 import { array, record, type PageResult, type RecordData } from './types.js';
 
 const API_BASE = 'https://api.moo.team/api';
-const READ_ROUTES = /^\/(?:tasks\/\d+|comments|user-profiles|task-statuses|projects\/\d+|activity-logs\/task\/\d+|files\/\d+)$/;
+const READ_ROUTES = /^\/(?:tasks(?:\/\d+)?|comments|user-profiles|task-statuses|projects(?:\/\d+)?|activity-logs\/task\/\d+|files\/\d+)$/;
 
 export class ApiClient {
   constructor(readonly config: Config, readonly log: Logger, private readonly fetcher: typeof fetch = fetch) {}
@@ -16,10 +16,10 @@ export class ApiClient {
     catch { throw new MooTeamError('INVALID_RESPONSE', 'Moo.team returned an invalid JSON response.'); }
   }
 
-  async collection(path: string, params: Record<string, string | number> = {}): Promise<PageResult> {
+  async collection(path: string, params: Record<string, string | number> = {}, maxPages = this.config.maxPages): Promise<PageResult> {
     const result: PageResult = { items: [], complete: false, total: null, pagesRead: 0, warnings: [] };
     const seen = new Set<string>();
-    for (let page = 1; page <= this.config.maxPages; page++) {
+    for (let page = 1; page <= Math.min(maxPages, this.config.maxPages); page++) {
       let raw: unknown;
       try { raw = await this.json(path, { ...params, page }); }
       catch (error) {
@@ -58,7 +58,7 @@ export class ApiClient {
       if (!result.complete) result.warnings.push('Missing pagination metadata; completeness cannot be established.');
       return result;
     }
-    result.warnings.push(`Stopped at the configured limit of ${this.config.maxPages} pages.`);
+    result.warnings.push(`Stopped at the configured limit of ${Math.min(maxPages, this.config.maxPages)} pages.`);
     return result;
   }
 

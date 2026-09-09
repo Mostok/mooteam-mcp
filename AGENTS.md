@@ -24,6 +24,17 @@ new versions to npm and creates the tag/release; do not manually publish or tag.
 
 When the user supplies a person's role, resolve their stable userId from task
 context and update the local roles.json described in docs/configuration.md.
+Prefer `list_participants` and `set_participant_role` with exact ID/name validation.
 Only persist user-confirmed roles; clarify ambiguous names. Preserve unrelated
 entries and company scope. Never commit the real directory or infer job titles
 from discussion. The server reloads roles on every task context request.
+
+## Local state and attachments
+
+History stores bounded gzip fingerprints and short ID/status events only, never
+source bodies. Internal attachment/related reads must not advance baselines.
+Preserve complete baselines when source pagination is incomplete or state is invalid.
+Attachment bytes, extracted text and rendered pages remain in memory; do not add
+disk caches or temporary document extraction. Preserve parser resource limits and
+explicit extraction/visual limitations. Local state writes are allowed; Moo.team
+network operations remain GET-only.

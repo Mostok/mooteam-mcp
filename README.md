@@ -15,7 +15,11 @@ This is an independent community integration, not an official Moo.team product.
 - Adds user-confirmed participant roles from an optional local directory.
 - Separates human discussion from optional activity history.
 - Associates files with their task description or specific comment.
-- Returns supported images as MCP image content, PDF embedded text and UTF-8 text.
+- Searches task titles/descriptions by project, assignee and lifecycle status.
+- Reads parents, subtasks and task links with their discussion source.
+- Compares reads using a bounded gzip history of fingerprints, without storing task bodies.
+- Updates user-confirmed roles through MCP in a local directory.
+- Reads images, PDF text/page images, DOCX/XLSX/PPTX text, ZIP listings and text members.
 - Reports incomplete pagination, unsupported formats and truncated extraction.
 - Accepts old `app.moo.team` links, new `new-app.moo.team` task links and numeric IDs.
 
@@ -70,18 +74,34 @@ Listing an attachment does not mean its contents have been read.
 
 | Tool | Purpose |
 |---|---|
-| `get_task_context` | Task details, attributed comments, file manifest and optional history |
+| `get_task_context` | Task details, attributed comments, file manifest and changes since last read |
 | `read_attachment` | Read a file belonging to that task or its visible comments |
+| `get_task_changes` | Compare current data with the last local baseline |
+| `get_related_tasks` | Read parents, subtasks and tasks linked in discussion |
+| `search_tasks` | Search titles/descriptions with bounded collection scanning |
+| `list_projects` | Discover accessible project names and IDs |
+| `list_participants` | Resolve people and their local roles |
+| `set_participant_role` | Save an explicitly supplied role locally |
 
 ## Boundaries
 
-The server exposes only reads. It cannot post comments, change tasks, track time
-or upload files. Access is limited by the configured Moo.team account's permissions.
+All Moo.team requests are GET-only. The server cannot post comments, change tasks,
+track time or upload files. It can update local history and participant roles.
+Access is limited by the configured Moo.team account's permissions.
 It uses observed application API endpoints, which may change without notice.
 
-Images have a 5 MiB output limit. PDF extraction reads embedded text, with no OCR
-or interpretation of diagrams. Word, Excel, archives, audio and video are listed
-but not extracted in this release. External links are retained without fetching them.
+Attachment bytes and rendered pages stay in memory; there is no attachment cache
+or document temporary directory. Images have a 5 MiB output limit. Selected PDF
+pages can be returned as images for the assistant to inspect scans and diagrams;
+there is no automatic OCR transcript. Office extraction reads text and reports
+visual/layout limitations. Legacy DOC/XLS/PPT, audio, video and non-ZIP archives
+are unsupported. External links are retained without fetching them.
+
+History defaults to at most **1 MiB compressed per workspace**, 200 tasks and
+90 days since last observation, with at most 20 change events per task. It stores
+hashes, IDs, statuses and timestamps, never task/comment bodies or file contents.
+Expiry and eviction run on the next tracked read. See [configuration](docs/configuration.md)
+for storage details, disabling history and limits.
 
 ## Documentation
 

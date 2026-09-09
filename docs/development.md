@@ -11,7 +11,8 @@ npm pack --dry-run
 
 Tests use synthetic data and an injected fetch implementation. No credentials or
 network access are needed for the test suite. The protocol test starts a separate
-stdio server and verifies tool discovery, task reads and image blocks.
+stdio server and verifies tool discovery, task reads, history, local roles, search
+and image blocks. Synthetic Office/ZIP/PDF fixtures are constructed in memory.
 
 For a live read-only check, configure local credentials and run `mooteam-mcp --check`.
 Set `MOOTEAM_SMOKE_TASK` and optionally `MOOTEAM_SMOKE_FILE`, then run `npm run smoke`.
@@ -32,13 +33,35 @@ MCP stdio → tool handlers → task context / attachment services → GET-only 
 | `src/api-client.ts` | Fixed API origin, auth, bounded GETs and pagination |
 | `src/task-context.ts` | Task/comment assembly, authors and file ownership |
 | `src/roles.ts` | Bounded local role directory, workspace scope and project overrides |
+| `src/local-state.ts` | Bounded reads, cross-process locks and atomic local state replacement |
+| `src/history.ts` | Compressed semantic fingerprints, changes and retention/size eviction |
+| `src/search.ts` | Project/participant discovery and bounded task collection search |
+| `src/related.ts` | Parent/subtask/link traversal with provenance and attempt/depth limits |
 | `src/rich-text.ts` | Rich-text conversion with explicit limitations |
 | `src/attachments.ts` | File validation, format dispatch and output bounds |
-| `src/pdf-worker.ts` | Isolated PDF text extraction |
+| `src/pdf-worker.ts` | Isolated PDF text extraction and selected-page rendering |
+| `src/documents.ts`, `src/document-worker.ts` | Isolated bounded ZIP/OOXML text extraction |
 
-Runtime dependencies are the official MCP server SDK v2, Zod and PDF.js.
+Runtime dependencies are the official MCP server SDK v2, Zod, PDF.js,
+`@napi-rs/canvas` for PDF rendering, `yauzl` for bounded ZIP streams and `saxes`
+for XML parsing without DTDs/external entities.
 MCP SDK's stdio compatibility support handles older protocol clients.
 There is no LLM API dependency and no hosted proxy.
+
+Only explicit task tool reads update history. The full normalized comment set is
+associated with a context object in a WeakMap, so returned pagination and internal
+attachment ownership checks cannot corrupt or consume baselines. History stores
+hashes and IDs, never rich bodies. Local role updates require user-supplied roles
+and exact API name/ID resolution. Moo.team requests remain GET-only; MCP tools
+that modify local files are annotated as local writes.
+
+Document parsers receive byte arrays and return text/images over worker messages.
+They never extract archives onto the filesystem. Limits include 1000 archive
+entries, 8 MiB per inflated member, 24 MiB total inflation, 100000 XML elements,
+128 nesting levels, 10000 spreadsheet cells and requested character/page limits.
+PDF images are capped at 4 million pixels per page and 5 MiB total PNG bytes.
+Parser stdout/stderr is consumed privately so document content cannot enter MCP
+protocol output or application logs. Every extraction reports its limitations.
 
 ## Release
 
