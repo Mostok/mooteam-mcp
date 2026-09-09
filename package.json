@@ -1,6 +1,6 @@
 {
   "name": "mooteam-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Read-only Moo.team MCP server: task context, attributed comments and attachments through the API.",
   "type": "module",
   "bin": {
