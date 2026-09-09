@@ -149,9 +149,12 @@ function tinyPdf() {
 }
 
 test('PDF extraction runs in an isolated worker and reports character truncation', async () => {
-  const full = await extractPdf(tinyPdf(), 1, 1000, 10000);
+  // Hosted Windows runners can spend substantial time loading PDF.js on a cold start.
+  // This test checks extraction semantics, not worker startup speed.
+  const timeoutMs = process.env.CI ? 60000 : 10000;
+  const full = await extractPdf(tinyPdf(), 1, 1000, timeoutMs);
   assert.match(full.pages[0].text, /Synthetic PDF text/);
   assert.equal(full.totalPages, 1); assert.equal(full.truncated, false);
-  const limited = await extractPdf(tinyPdf(), 1, 5, 10000);
+  const limited = await extractPdf(tinyPdf(), 1, 5, timeoutMs);
   assert.equal(limited.pages[0].text.length, 5); assert.equal(limited.truncated, true);
 });
