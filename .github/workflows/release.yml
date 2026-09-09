@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.repository == 'Mostok/mooteam-mcp'
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@11.19.1 --ignore-scripts
+      - name: Check whether this version needs publishing
+        id: plan
+        run: node scripts/release.mjs plan
+      - if: steps.plan.outputs.publish == 'true'
+        run: npm ci --ignore-scripts
+      - if: steps.plan.outputs.publish == 'true'
+        run: npm run build
+      - name: Inspect package contents
+        if: steps.plan.outputs.publish == 'true'
+        run: |
+          npm pack --json --ignore-scripts > pack.json
+          node scripts/release.mjs inspect
+      - name: Publish using npm trusted publishing
+        if: steps.plan.outputs.publish == 'true'
+        run: npm publish --access public
+      - name: Verify registry publication
+        if: steps.plan.outputs.release == 'true'
+        run: node scripts/release.mjs verify
+
+  github-release:
+    needs: publish
+    if: needs.publish.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Create tag and release notes
+        run: node scripts/release.mjs github
+        env:
+          GH_TOKEN: ${{ github.token }}

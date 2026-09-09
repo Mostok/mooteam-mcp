@@ -42,12 +42,35 @@ There is no LLM API dependency and no hosted proxy.
 
 ## Release
 
-1. Run tests and type checking.
-2. Run `npm pack --dry-run` and inspect the package allowlist.
-3. Check staged source contains no tokens, private task data or local configuration.
-4. Commit and push reviewed source.
-5. Publish with `npm publish --access public` using your own npm account.
-6. Verify the published version and install it in a clean directory.
+Releases run automatically from `.github/workflows/release.yml` after a push to
+`main`. Pull requests and other branches only run checks. To prepare a release:
+
+```sh
+npm run release:version -- patch
+```
+
+Use `minor` or `major` when appropriate. This updates package.json and the lockfile;
+the CLI and MCP protocol read that same version. Commit the reviewed changes and
+push to main. Never include local credentials, participant directories or real
+task fixtures in the commit.
+
+The workflow runs the Windows/Linux and Node 22/24 checks first. If the version is
+newer than npm's latest release, it builds, checks the package file allowlist,
+publishes to npm, verifies the registry commit, then creates a `vVERSION` tag and
+GitHub Release with generated notes. Unchanged published versions are skipped.
+Only stable versions are supported by this workflow.
+
+Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)
+with OIDC: package `mooteam-mcp`, repository `Mostok/mooteam-mcp`, workflow filename
+`release.yml`, and direct `npm publish` permission. No npm token or Moo.team
+credentials are stored in Actions. Only the publish job can request an OIDC token;
+only the GitHub Release job can write repository metadata.
+
+If a run fails, use **Re-run failed jobs** on that run. A version already published
+from the same commit is not republished; verification and GitHub Release creation
+can resume. Do not move an existing release tag. A new commit without a new version
+does not repair an older release; retry the original run instead. `workflow_dispatch`
+is available on main and runs the same checks and release guards.
 
 Only `dist`, `docs`, README, package metadata and LICENSE ship in the npm package.
 Internal plans, editor settings, tests, local credentials and development helpers

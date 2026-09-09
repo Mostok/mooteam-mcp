@@ -20,7 +20,8 @@
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "release:version": "npm version --no-git-tag-version"
   },
   "keywords": [
     "mcp",

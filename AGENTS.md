@@ -16,6 +16,9 @@ Preserve comment authors/replies, file ownership and explicit completeness indic
 Never log or publish credentials, real task fixtures, full network captures or local config.
 MCP stdout must contain protocol messages only. Logs use configurable stderr logging.
 Use npm test and npm run check before release; inspect npm pack contents.
+For an authorized release, bump with `npm run release:version -- patch` (or minor/major),
+commit and push main, then verify the Release workflow. GitHub Actions publishes
+new versions to npm and creates the tag/release; do not manually publish or tag.
 
 ## Maintaining local participant roles
 
