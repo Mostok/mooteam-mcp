@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tgz
+.env
+.env.*
+!.env.example
+.local/
+*.log
+.idea/
+.codex/
+.ai-factory.json
+.ai-factory/
+coverage/
